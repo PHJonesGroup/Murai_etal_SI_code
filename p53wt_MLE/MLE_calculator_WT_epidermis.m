@@ -7,7 +7,7 @@ load 'TotalCloneSizes_raw_data.mat'
 nmice = [4 4 3 5 5 4 3]; %depending on time point
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% GROUPING INPUT DATA:
+%% GROUPING INPUT EXPERIMENTAL DATA:
 rx_basal = {rx_basal_t1_indiv1 rx_basal_t2_indiv1 rx_basal_t3_indiv1 rx_basal_t4_indiv1 rx_basal_t5_indiv1 rx_basal_t6_indiv1 rx_basal_t7_indiv1; rx_basal_t1_indiv2 rx_basal_t2_indiv2 rx_basal_t3_indiv2 rx_basal_t4_indiv2 rx_basal_t5_indiv2 rx_basal_t6_indiv2 rx_basal_t7_indiv2; rx_basal_t1_indiv3 rx_basal_t2_indiv3 rx_basal_t3_indiv3 rx_basal_t4_indiv3 rx_basal_t5_indiv3 rx_basal_t6_indiv3 rx_basal_t7_indiv3; rx_basal_t1_indiv4 rx_basal_t2_indiv4 [] rx_basal_t4_indiv4 rx_basal_t5_indiv4 rx_basal_t6_indiv4 []; [] [] [] rx_basal_t4_indiv5 rx_basal_t5_indiv5 [] []};
 rx_total = {rx_total_t1_indiv1 rx_total_t2_indiv1 rx_total_t3_indiv1 rx_total_t4_indiv1 rx_total_t5_indiv1 rx_total_t6_indiv1 rx_total_t7_indiv1; rx_total_t1_indiv2 rx_total_t2_indiv2 rx_total_t3_indiv2 rx_total_t4_indiv2 rx_total_t5_indiv2 rx_total_t6_indiv2 rx_total_t7_indiv2; rx_total_t1_indiv3 rx_total_t2_indiv3 rx_total_t3_indiv3 rx_total_t4_indiv3 rx_total_t5_indiv3 rx_total_t6_indiv3 rx_total_t7_indiv3; rx_total_t1_indiv4 rx_total_t2_indiv4 [] rx_total_t4_indiv4 rx_total_t5_indiv4 rx_total_t6_indiv4 []; [] [] [] rx_total_t4_indiv5 rx_total_t5_indiv5 [] []};
 
@@ -49,7 +49,8 @@ time4pruning = [6,7];
 [rfreq_tot_dim_all, rfreq_tot_dim_all_rel, dim_label] = size2freqbinned(rfreq_tot_all,rx_total_all,rtime,1);
 
 %% CALCULATION OF LIKELIHOOD VALUES WITH DIFFERENT PARAMETER SETS:
-% GRID SEARCH ON UNKNOWN PARAMETER VALUES WITHIN THE CONSTRAINTS GIVEN BY THE HOMEOSTATIC CONDITION/CONFIDENCE BOUNDS PROVIDED ABOVE:
+% GRID SEARCH ON UNKNOWN PARAMETER VALUES:
+% (the following particular code exemplifies the analysis within the constraints given by the homeostatic condition/confidence bounds provided above):
 lambda_all = lambda_min95ci:((lambda_max95ci-lambda_min95ci)/4):lambda_max95ci;
 est_tau_inv_all = est_tau_inv_min95ci:((est_tau_inv_max95ci-est_tau_inv_min95ci)/4):est_tau_inv_max95ci;
 m_all = m_min95ci:((m_max95ci-m_min95ci)/4):m_max95ci;
@@ -93,7 +94,7 @@ for lup1 = 1:size(lambda_all,2)
                 [nfreq_tot_dim, nfreq_tot_dim_rel, dim_label] = size2freqbinned(nfreq_tot,nx_total,ntime,2);
 
                 % CALCULATION OF LIKELIHOOD FUNCTION (v1 & v2):
-                [Ltotal(buc1,1)] = logLike_calc(rfreq_tot_dim_all_rel,nfreq_tot_dim_rel,rtime);
+                [Ltotal(buc1,1)] = logLike_calc(rfreq_tot_dim_all,nfreq_tot_dim_rel,rtime);
 
                 r = r + (r_end/r_nsteps);
                 

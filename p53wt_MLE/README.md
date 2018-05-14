@@ -2,6 +2,8 @@
 Maximum likelihood estimate (MLE) calculation of the single-progenitor model parameters for WT epidermis.
 Run MLE-calculator-WT-epidermis.m to calculate the MLE values based on the experimental data on clone sizes.
 
+Please, be aware this process may take a huge time in a normal computer.
+
 ### Dependencies
 - TotalCloneSizes-raw-data.mat : contains the experimental data on total clone sizes
 - gillespie-EPC-total-paramest.m : runs the Gillespie algorithm
