@@ -1,4 +1,3 @@
-from __future__ import division
 import bisect
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +22,7 @@ class GeneralComp(object):
          If False, the fitness value of the last mutation added to a cell will replace the previous value
         :param sim_length: Integer. The length of the simulation.
         :param figsize: Tuple, size of the plot to output
-        :param plot_file: None or String. Path to a file to save the plot as a pdf - .pdf will be added to the filename
+        :param plot_file: None or String. Path to a file to save the plot. Include the file type suffix
          If None, will show the plot instead of saving it.
         """
 
@@ -55,6 +54,7 @@ class GeneralComp(object):
         self.combine_mutations = combine_mutations
 
         # Details for plotting
+        self.colourscales = None
         self.figsize = figsize
         self.plot_order = []  # Used to generate the plot of clones
         self.descendant_counts = {}
@@ -75,7 +75,7 @@ class GeneralComp(object):
         return new_fitness
 
     # The functions for plotting the results
-    def plot(self):
+    def plot(self, prepare_only=False):
         self.split_populations_for_plot()  # Breaks up the populations so subclones appear from their parent clone
         fig, ax = plt.subplots(figsize=self.figsize)
 
@@ -96,41 +96,47 @@ class GeneralComp(object):
                 y.append(self.split_pops_for_plotting[:pops][:, int(gen)].sum())
                 c.append('r')
 
-        ax.scatter(x, y, c=c, marker='x')
-        plt.ylim([0, 1])
-        plt.xlim([0, self.sim_length])
-
-        if self.plot_file:
-            plt.savefig('{0}.pdf'.format(self.plot_file))
+        if prepare_only:
+            self.stackplot_data = x, y, c
+            fig.clear()
         else:
-            plt.show()
+            ax.scatter(x, y, c=c, marker='x')
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            plt.ylim([0, 1])
+            plt.xlim([0, self.sim_length])
 
-    def get_colour(self, rate, clone_type):
-        if clone_type == 0:
-            return cm.YlOrBr(rate / 2)  # Colours for wildtype subclones
+            if self.plot_file:
+                plt.savefig(self.plot_file)
+            else:
+                plt.show()
+
+    def get_colour(self, rate, clone_type, ns=None, initial=None):
+        if self.colourscales is not None:
+            return self.colourscales.get_colour(rate, clone_type, ns, initial)
         else:
-            return cm.Greens(rate)  # Colours for mutation A subclones
+            if clone_type == 0:
+                return cm.YlOrBr(rate / 2)  # Colours for wildtype subclones
+            else:
+                return cm.Greens(rate)  # Colours for mutation A subclones
 
-    def get_colours(self):
+    def get_colours(self, clones_array=None):
         # Generate the colours for the clones plot. Colour depends on type (wildtype/A) and relative fitness.
-        rates = self.clones_array[:, self.growth_idx]
+        if clones_array is None:
+            clones_array = self.clones_array
+        rates = clones_array[:, self.growth_idx]
         min_ = rates.min() - 0.1
         max_ = rates.max()
         self.colours = {}
-        for clone in self.clones_array:
+        for clone in clones_array:
             scaled_rate = (clone[self.growth_idx] - min_) / (max_ - min_)
-            self.colours[clone[self.id_idx]] = self.get_colour(scaled_rate, clone[self.type_idx])
+            if clone[self.generation_born_idx] == 0:
+                initial = True
+            else:
+                initial = False
+            self.colours[clone[self.id_idx]] = self.get_colour(scaled_rate, clone[self.type_idx], initial=initial)
 
         return [self.colours[o] for o in self.plot_order]
-
-    def order_results(self):
-        # Order the arrays to put all mutation A, then all WT
-        wt_clone_idx = self.clones_array[:, self.type_idx] == 0
-        self.clones_array = np.concatenate((self.clones_array[~wt_clone_idx], self.clones_array[wt_clone_idx]),
-                                           axis=0)
-        self.population_array = np.concatenate(
-            (self.population_array[~wt_clone_idx], self.population_array[wt_clone_idx]),
-            axis=0)
 
     def get_children(self, idx):
         # Return the ids of subclones of the given clone
@@ -175,7 +181,7 @@ class GeneralComp(object):
                 next_array = self.cumulative_array[i - 1]
             else:
                 next_array = 0
-            ax.fill_between(range(self.sim_length + 1), array, 0, where=array > next_array, facecolor=colour,
+            ax.fill_between(list(range(self.sim_length + 1)), array, 0, where=array > next_array, facecolor=colour,
                             interpolate=True, linewidth=0)
 
 
@@ -197,7 +203,7 @@ class Competition(GeneralComp):
          If False, the fitness value of the last mutation added to a cell will replace the previous value
         :param num_generations: Integer. How many generations the simulation runs for.
         :param figsize: Tuple, size of the plot to output
-        :param plot_file: None or String. Path to a file to save the plot as a pdf - .pdf will be added to the filename
+        :param plot_file: None or String. Path to a file to save the plot. Include the file type suffix
          If None, will show the plot instead of saving it.
         """
         super(Competition, self).__init__(WT_init, A_init, A_fitness, mutation_rate, fitness_distribution,
@@ -226,7 +232,6 @@ class Competition(GeneralComp):
                 self.introduce_mutation()
 
         # A steps to prepare for plotting
-        self.order_results()
         self.proportional_populations = self.population_array / self.population_array.sum(axis=0)
 
     def introduce_mutation(self):
@@ -278,7 +283,7 @@ class MoranStyleComp(GeneralComp):
          occurs per step. Retaining the populations after every step and plotting all of them would be too memory
          intensive.
         :param figsize: Tuple, size of the plot to output
-        :param plot_file: None or String. Path to a file to save the plot as a pdf - .pdf will be added to the filename
+        :param plot_file: None or String. Path to a file to save the plot. Include the file type suffix
          If None, will show the plot instead of saving it.
         """
         sim_length = int(num_births / sampling)
@@ -311,7 +316,7 @@ class MoranStyleComp(GeneralComp):
         # Much slower process in terms of iterations
         # Only single change per iteration
         # Instead of storing every single change, we only keep a record every n-steps, given by self.sampling
-        current_population = self.population_array[:, 0]
+        current_population = self.population_array[:, 0].copy()
 
         assert self.mutation_rate < 1, 'Mutation rate >= 1. While loop would never exit!'
 
@@ -344,7 +349,6 @@ class MoranStyleComp(GeneralComp):
                     self.population_array[:, self.plot_idx] = current_population
 
         # A steps to prepare for plotting
-        self.order_results()
         self.proportional_populations = self.population_array / self.population_array.sum(axis=0)
 
     def introduce_mutation(self, current_population):
@@ -387,7 +391,7 @@ def normal_fitness_dist(var, mean=1):
     def fitness_func():
         g = np.random.normal(mean, var)
         if g < 0:
-            print 'growth rate below zero! Redrawing a new rate'
+            print('growth rate below zero! Redrawing a new rate')
             return fitness_func()
         return g
 
@@ -399,7 +403,7 @@ def uniform_fitness_dist(min_, max_):
     # Done this way so can be called without parameters
     # Allow us to replace with other distributions in the simulation if desired
     if min_ < 0:
-        print 'Minimum of uniform distribution set below zero. Setting to zero instead.'
+        print('Minimum of uniform distribution set below zero. Setting to zero instead.')
         min_ = 0
 
     def fitness_func():
