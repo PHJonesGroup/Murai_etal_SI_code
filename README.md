@@ -1,2 +1,2 @@
 # Murai_etal_SI_code
-Pre-cancer: how p53 mutant progenitors colonize normal epidermis
+Epidermal tissue adapts to restrain progenitors carrying clonal p53 mutations
